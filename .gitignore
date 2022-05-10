@@ -49,3 +49,12 @@ prase/__pycache__/
 se/__pycache__/
 pr/__pycache__/
 *.json
+
+# Output File
+output/
+
+# SBert emb
+pr/sbert_emb/
+
+# Preprocessing
+*.ipynb
