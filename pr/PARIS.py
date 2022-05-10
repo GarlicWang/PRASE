@@ -86,6 +86,19 @@ class PARIS:
         """
         return self._pr.get_forced_eqv_result()
 
+
+    def set_sbert_eqv_weight(self, weight):
+        """
+            Set the weight of SBert similarity
+        """
+        self._pr.set_sbert_eqv_weight(weight)
+
+    def set_emb_eqv_weight(self, weight):
+        """
+            Set the weight of SE module similarity
+        """
+        self._pr.set_emb_eqv_weight(weight)
+
     def set_se_trade_off(self, tradeoff):
         """
             Set the tradeoff of the reasoning probability and the embedding similarity
