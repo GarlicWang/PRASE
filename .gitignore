@@ -53,6 +53,9 @@ pr/__pycache__/
 # Output File
 output/
 
+# Input File
+test/data/
+
 # SBert emb
 pr/sbert_emb/
 
