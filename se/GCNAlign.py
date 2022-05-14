@@ -679,10 +679,10 @@ class GCNAlign:
         for (kg1_ent, kg2_ent) in kg_matched_pairs:
             kg1_emb_id, kg2_emb_id = self.kg1_test_ent_list[kg1_ent], self.kg2_test_ent_list[kg2_ent]
             kg1_id, kg2_id = self.embed_idx_dict_inv[kg1_emb_id], self.embed_idx_dict_inv[kg2_emb_id]
-            self.kgs.se_feedback_pairs.add((kg1_id, kg2_id))
+            self.kgs.se_feedback_pairs.add((kg1_id, kg2_id))       # se_feedback_pairs hasn't been used
             if distance[kg1_ent][kg2_ent] > 0.3:
                 continue
-            self.kgs.insert_ent_eqv_both_way_by_id(kg1_id, kg2_id, 1 - distance[kg1_ent][kg2_ent])
+            self.kgs.insert_ent_eqv_both_way_by_id(kg1_id, kg2_id, 1 - distance[kg1_ent][kg2_ent])      # place the mapping result into ent_eqv_mp
             mapping_num += 1
         self.kgs.pr.init_loaded_data()
         print(str(strftime("[%Y-%m-%d %H:%M:%S]: ", localtime())) + "Successfully adding " + str(mapping_num) + " entity mappings")

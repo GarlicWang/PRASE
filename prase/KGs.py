@@ -22,7 +22,7 @@ class KGs:
         if pr_module is not None:
             self.pr = pr_module(self, **kwargs)
 
-    def _align_literals(self):
+    def _align_literals(self):  # literal implement exact match
         for (lite_id, lite_name) in self.kg1.lite_id_name_dict.items():
             if self.kg2.name_lite_id_dict.__contains__(lite_name):
                 lite_cp_id = self.kg2.name_lite_id_dict[lite_name]
@@ -78,7 +78,7 @@ class KGs:
         self.pr.update_ent_eqv(ent_cp_id, ent_id, prob, False)
         return True
 
-    def insert_lite_eqv_by_id(self, lite_id, lite_cp_id, prob=None, forced=True):
+    def insert_lite_eqv_by_id(self, lite_id, lite_cp_id, prob=None, forced=True):   # only used when loading PRASE model
         if prob is None:
             prob = KGs.default_lite_align_prob
         self.pr.update_lite_eqv(lite_id, lite_cp_id, prob, forced)

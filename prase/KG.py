@@ -73,7 +73,7 @@ class KG:
         return value
 
     @staticmethod
-    def get_id_from_name_helper(dictionary, inv_dictionary, name):
+    def get_id_from_name_helper(dictionary, inv_dictionary, name):  # the id of ent, rel, attr, lite will not repeat. The id of 2 KGs are independent.
         if not dictionary.__contains__(name):
             generated_id = KG.component_id
             KG.component_id += 1
