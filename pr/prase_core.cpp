@@ -320,7 +320,7 @@ void KG::test() {
     }
 }
 
-void KG::init_functionalities() {
+void KG::init_functionalities() {       // calculate the functionalities and inverse functionalities of all relations
     std::unordered_map<uint64_t, uint64_t> rel_id_triple_num_mp;
     std::unordered_map<uint64_t, std::set<uint64_t>> rel_id_head_set;
     std::unordered_map<uint64_t, std::set<uint64_t>> rel_id_tail_set;
@@ -890,7 +890,7 @@ void PARISEquiv::reset_ongoing_mp() {
     ongoing_rel_norm.clear();
 }
 
-std::vector<std::tuple<uint64_t, uint64_t, double>>& PARISEquiv::get_ent_eqv_result() {
+std::vector<std::tuple<uint64_t, uint64_t, double>>& PARISEquiv::get_ent_eqv_result() { // Final output of prediction
     return ent_eqv_tuples;
 }
 
