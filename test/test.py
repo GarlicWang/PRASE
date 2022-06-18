@@ -1,4 +1,3 @@
-import torch
 import csv
 import os
 import sys
@@ -97,6 +96,9 @@ print_kg_stat(kg2)
 for key in kg2_sbert_dict.keys():
     kg2.insert_ent_sbert_embed_by_name(key, kg2_sbert_dict[key])
 
+print(get_time_str() + "Construct KGs...")
+sys.stdout.flush()
+
 # construct KGs object
 kgs = pu.construct_kgs(kg1, kg2)
 
@@ -105,7 +107,7 @@ kgs.set_se_module(se.GCNAlign)
 kgs.set_pr_module(pr.PARIS)
 
 # Set Thread Number:
-# kgs.pr.set_worker_num(6)
+# kgs.pr.set_worker_num(6)  # default is the hardware concurrency of the thread
 
 # Set Entity Candidate Number:
 CANDIDATE_NUM = 1
@@ -113,7 +115,7 @@ kgs.pr.set_ent_candidate_num(CANDIDATE_NUM)
 print(get_time_str() + "Entity Candidate Number: " + str(CANDIDATE_NUM))
 
 # Set SBert Eqvalence Weight:
-SBERT_EQV_WEIGHT = 0.9
+SBERT_EQV_WEIGHT = 0.1
 kgs.pr.set_sbert_eqv_weight(SBERT_EQV_WEIGHT)
 print(get_time_str() + "SBert Eqvalence Weight: " + str(SBERT_EQV_WEIGHT))
 
@@ -149,7 +151,7 @@ kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
 
 kgs.pr.enable_rel_init(False)
 
-iteration = 3
+iteration = 1
 for i in range(iteration):
     print(get_time_str() + "Performing SE Module (GCNAlign)...")
     sys.stdout.flush()
@@ -170,10 +172,6 @@ for i in range(iteration):
     print_kgs_stat(kgs)
     kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
 
-# Save alignment result:
-# save_alignment(kgs)
-
 # Save PRASE Model:
-# save_path = os.path.join(base, "models/KKdata_V2/iter_1_model")
-# save_path = os.path.join(base, "models/MED/test_model")
+# save_path = os.path.join(base, "models/KKdata_V4/PRASE_model")
 # pu.save_prase_model(kgs, save_path)
