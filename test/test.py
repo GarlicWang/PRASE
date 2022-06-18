@@ -22,18 +22,18 @@ def print_kgs_stat(kgs_obj):
     print(get_time_str() + "Discovered attribute mapping number: " + str(len(attr_align_a) + len(attr_align_b)))
     sys.stdout.flush()
 
-# def save_alignment(kgs_obj):
-#     # output_path = f"output/v4_0.9/iter_{iteration}_ent_align.txt"
-#     # output_path = f"output/KKdata_V4/iter_test/iter_{iteration}_1.txt"
-#     output_path = f"output/KKdata_V4/last_PR_multi/iter_{iteration}_candidate_5_without_visited.txt"
-#     with open(output_path, 'w') as fout:
-#         for tuple in kgs_obj.get_ent_align_name_result():
-#             fout.write(tuple[0]+'\t'+tuple[1]+'\t'+str(tuple[2])+'\n')
 
 def save_alignment(kgs_obj, iter, module):
-    output_path = f"output/KKdata_V4/sbert_weight/sbert_weight_{SBERT_EQV_WEIGHT}/{module}_iter_{iter}.txt"
+    # output_dir = f"output/KKdata_V4/last_multi/ent_cand_3"
+    output_dir = f"output/KKdata_V4/sbert_weight/sbert_weight_{SBERT_EQV_WEIGHT}/set_ent_candidate_{CANDIDATE_NUM}"
+    # output_dir = "output/TopK_test/test_30_thre_0.1"
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+    output_path = os.path.join(output_dir, f"{module}_iter_{iter}.txt")
     with open(output_path, 'w') as fout:
         for tuple in kgs_obj.get_ent_align_name_result():
+            if tuple[0] == "" or tuple[1] == "":
+                continue
             fout.write(tuple[0]+'\t'+tuple[1]+'\t'+str(tuple[2])+'\n')
 
 def print_kg_stat(kg_obj):
