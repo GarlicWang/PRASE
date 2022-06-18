@@ -122,6 +122,14 @@ EMB_EQV_WEIGHT = 0.1
 kgs.pr.set_emb_eqv_weight(EMB_EQV_WEIGHT)
 print(get_time_str() + "Embedding Eqvalence Weight: " + str(EMB_EQV_WEIGHT))
 
+ENT_EQV_THRE = 0
+kgs.pr.set_ent_eqv_bar(ENT_EQV_THRE)
+print(get_time_str() + "Entity Eqvalence Threshold: " + str(ENT_EQV_THRE))
+
+PR_ITERATION_NUM = 10
+kgs.pr.set_max_iteration_num(PR_ITERATION_NUM)
+print(get_time_str() + "PR Iteration Number: " + str(PR_ITERATION_NUM))
+
 '''
 Load PRASEMap Model:
 pu.load_prase_model(kgs, load_path)

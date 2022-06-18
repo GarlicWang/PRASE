@@ -956,6 +956,7 @@ class PRModule {
     void set_rel_func_bar(double);
     void set_ent_eqv_bar(double);
     void set_rel_eqv_bar(double);
+    void set_max_iteration_num(uint64_t);
     void set_sbert_eqv_weight(double);
     void set_emb_eqv_weight(double);
     void set_se_trade_off(double);
@@ -1011,6 +1012,10 @@ void PRModule::enable_emb_eqv(bool flag) {
 
 void PRModule::set_ent_candidate_num(uint64_t num) {
     paris_params->ENT_CANDIDATE_NUM = num;
+}
+
+void PRModule::set_max_iteration_num(uint64_t num) {
+    paris_params->MAX_ITERATION_NUM = num;
 }
 
 void PRModule::set_sbert_eqv_weight(double weight) {
@@ -1430,5 +1435,5 @@ PYBIND11_MODULE(prase_core, m) {
 
     py::class_<KG>(m, "KG").def(py::init()).def("insert_rel_triple", &KG::insert_rel_triple).def("insert_rel_inv_triple", &KG::insert_rel_inv_triple).def("insert_attr_triple", &KG::insert_attr_triple).def("insert_attr_inv_triple", &KG::insert_attr_inv_triple).def("get_functionality", &KG::get_functionality).def("get_inv_functionality", &KG::get_inv_functionality).def("get_relation_triples", &KG::get_relation_triples).def("get_attribute_triples", &KG::get_attribute_triples).def("get_attr_frequency_mp", &KG::get_attr_frequency_mp).def("get_ent_set", &KG::get_ent_set).def("get_rel_set", &KG::get_rel_set).def("get_lite_set", &KG::get_lite_set).def("get_attr_set", &KG::get_attr_set).def("set_ent_embed", &KG::set_ent_embed).def("set_ent_sbert_embed", &KG::set_ent_sbert_embed).def("get_ent_embed", &KG::get_ent_embed).def("clear_ent_embeds", &KG::clear_ent_embeds).def("get_rel_ent_tuples_by_ent", &KG::get_rel_ent_tuples_by_ent).def("get_attr_lite_tuples_by_ent", &KG::get_attr_lite_tuples_by_ent).def("test", &KG::test);
 
-    py::class_<PRModule>(m, "PRModule").def(py::init<KG&, KG&>()).def("init", &PRModule::init).def("init_loaded_data", &PRModule::init_loaded_data).def("update_ent_eqv", &PRModule::update_ent_eqv).def("update_lite_eqv", &PRModule::update_lite_eqv).def("update_rel_eqv", &PRModule::update_rel_eqv).def("remove_forced_equiv", &PRModule::remove_forced_eqv).def("set_worker_num", &PRModule::set_worker_num).def("set_emb_cache_capacity", &PRModule::set_emb_cache_capacity).def("set_se_trade_off", &PRModule::set_se_trade_off).def("set_sbert_eqv_weight", &PRModule::set_sbert_eqv_weight).def("set_emb_eqv_weight", &PRModule::set_emb_eqv_weight).def("set_ent_candidate_num", &PRModule::set_ent_candidate_num).def("set_rel_func_bar", &PRModule::set_rel_func_bar).def("set_ent_eqv_bar", &PRModule::set_ent_eqv_bar).def("set_rel_eqv_bar", &PRModule::set_rel_eqv_bar).def("reset_emb_eqv", &PRModule::reset_emb_eqv).def("enable_rel_init", &PRModule::enable_rel_init).def("enable_emb_eqv", &PRModule::enable_emb_eqv).def("get_kg_a_unaligned_ents", &PRModule::get_kg_a_unaligned_ents).def("get_kg_b_unaligned_ents", &PRModule::get_kg_b_unaligned_ents).def("run", &PRModule::run).def("get_ent_eqv_result", &PRModule::get_ent_eqv_result).def("get_rel_eqv_result", &PRModule::get_rel_eqv_result).def("get_forced_eqv_result", &PRModule::get_forced_eqv_result);
+    py::class_<PRModule>(m, "PRModule").def(py::init<KG&, KG&>()).def("init", &PRModule::init).def("init_loaded_data", &PRModule::init_loaded_data).def("update_ent_eqv", &PRModule::update_ent_eqv).def("update_lite_eqv", &PRModule::update_lite_eqv).def("update_rel_eqv", &PRModule::update_rel_eqv).def("remove_forced_equiv", &PRModule::remove_forced_eqv).def("set_worker_num", &PRModule::set_worker_num).def("set_emb_cache_capacity", &PRModule::set_emb_cache_capacity).def("set_se_trade_off", &PRModule::set_se_trade_off).def("set_sbert_eqv_weight", &PRModule::set_sbert_eqv_weight).def("set_max_iteration_num", &PRModule::set_max_iteration_num).def("set_emb_eqv_weight", &PRModule::set_emb_eqv_weight).def("set_ent_candidate_num", &PRModule::set_ent_candidate_num).def("set_rel_func_bar", &PRModule::set_rel_func_bar).def("set_ent_eqv_bar", &PRModule::set_ent_eqv_bar).def("set_rel_eqv_bar", &PRModule::set_rel_eqv_bar).def("reset_emb_eqv", &PRModule::reset_emb_eqv).def("enable_rel_init", &PRModule::enable_rel_init).def("enable_emb_eqv", &PRModule::enable_emb_eqv).def("get_kg_a_unaligned_ents", &PRModule::get_kg_a_unaligned_ents).def("get_kg_b_unaligned_ents", &PRModule::get_kg_b_unaligned_ents).def("run", &PRModule::run).def("get_ent_eqv_result", &PRModule::get_ent_eqv_result).def("get_rel_eqv_result", &PRModule::get_rel_eqv_result).def("get_forced_eqv_result", &PRModule::get_forced_eqv_result);
 }

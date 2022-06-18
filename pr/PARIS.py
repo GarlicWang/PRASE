@@ -93,6 +93,13 @@ class PARIS:
         """
         self._pr.set_sbert_eqv_weight(weight)
 
+    def set_max_iteration_num(self, num):
+        """
+            Set the maximum number of iterations
+            The default value is 10
+        """
+        self._pr.set_max_iteration_num(num)
+
     def set_emb_eqv_weight(self, weight):
         """
             Set the weight of SE module similarity
