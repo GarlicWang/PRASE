@@ -3,6 +3,7 @@ import os
 import sys
 import pr
 import se
+import sb
 import utils.PRASEUtils as pu
 from time import strftime, localtime
 
@@ -44,16 +45,6 @@ def print_kg_stat(kg_obj):
     print(get_time_str() + "Attribute Triple Number: " + str(int(len(kg_obj.get_attribute_id_triples()) / 2)))
     sys.stdout.flush()
 
-def load_sbert(kg1_sbert_path, kg2_sbert_path):
-    kg1_sbert_dict, kg2_sbert_dict = dict(), dict()
-    with open(kg1_sbert_path, 'r') as f:
-        reader = csv.reader(f)
-        kg1_sbert_dict = {rows[0]: rows[1:] for rows in reader}
-    with open(kg2_sbert_path, 'r') as f:
-        reader = csv.reader(f)
-        kg2_sbert_dict = {rows[0]: rows[1:] for rows in reader}
-    return kg1_sbert_dict, kg2_sbert_dict
-
 path = os.path.abspath(__file__)
 base, _ = os.path.split(path)
 
@@ -61,22 +52,20 @@ base, _ = os.path.split(path)
 # kg1_attr_path = os.path.join(base, "data/MED-BBK-9K/attr_triples_1")
 kg1_rel_path = os.path.join(base, "data/KKdata_V4/vod_triplet.txt")
 kg1_attr_path = os.path.join(base, "data/KKdata_V4/vod_triplet.txt")
-kg1_sbert_path = os.path.join(base, "../pr/sbert_emb/vod_emb.csv")
 
 # kg2_rel_path = os.path.join(base, "data/MED-BBK-9K/rel_triples_2")
 # kg2_attr_path = os.path.join(base, "data/MED-BBK-9K/attr_triples_2")
 kg2_rel_path = os.path.join(base, "data/KKdata_V4/tv_triplet.txt")
 kg2_attr_path = os.path.join(base, "data/KKdata_V4/tv_triplet.txt")
-kg2_sbert_path = os.path.join(base, "../pr/sbert_emb/tv_emb.csv")
 
 # test_path = os.path.join(base, "data/MED-BBK-9K/ent_links")
 test_path = os.path.join(base, "data/KKdata_V4/ent_mapping.txt")
 
-print(get_time_str() + "Loading Sbert Embedding...")
+print(get_time_str() + "Japanese Sentence Bert Inferencing...")
 sys.stdout.flush()
 
-# load sbert embedding from pretrained model
-kg1_sbert_dict, kg2_sbert_dict = load_sbert(kg1_sbert_path, kg2_sbert_path)
+SBert = sb.SBert()
+kg1_sbert_dict, kg2_sbert_dict = SBert.get_sbert_dict(kg1_rel_path, kg2_rel_path)
 
 print(get_time_str() + "Construct source KG...")
 sys.stdout.flush()
