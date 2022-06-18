@@ -80,9 +80,9 @@ struct PARISParams {
 
 PARISParams::PARISParams() {
     ENABLE_EMB_EQV = true;
-    ENT_EQV_THRESHOLD = 0.1;
+    ENT_EQV_THRESHOLD = 0.001;
     REL_EQV_THRESHOLD = 0.1;
-    REL_EQV_FACTOR_THRESHOLD = 0.01;
+    REL_EQV_FACTOR_THRESHOLD = 0;
     REL_INIT_EQV = 0.1;
     HIGH_CONF_THRESHOLD = 0.9;
     OUTPUT_THRESHOLD = 0.1;
@@ -94,13 +94,13 @@ PARISParams::PARISParams() {
     THREAD_NUM = std::thread::hardware_concurrency();
     MAX_THREAD_NUM = INT_MAX;
     MIN_THREAD_NUM = 1;
-    MAX_ITERATION_NUM = 10;
+    MAX_ITERATION_NUM = 10;  // 預設是10
     MAX_EMB_EQV_CACHE_NUM = 1000000;
     EMB_EQV_TRADE_OFF = 0.2;
     EMB_EQV_WEIGHT = 0.1;
     SBERT_EQV_WEIGHT = 0.1;
     SBERT_EMB_DIM = 768;
-    INV_FUNCTIONALITY_THRESHOLD = 0.05;
+    INV_FUNCTIONALITY_THRESHOLD = 0;
 }
 
 class KG {
@@ -574,11 +574,11 @@ PARISEquiv::PARISEquiv(KG* kg_a, KG* kg_b, PARISParams* paris_params) {
 
     uint64_t kg_a_ent_num = kg_a->get_ent_set().size();
     uint64_t kg_b_ent_num = kg_b->get_ent_set().size();
-    ent_eqv_mp.reserve(kg_a_ent_num + kg_b_ent_num);
-    ongoing_ent_eqv_mp.reserve(kg_a_ent_num);
+    ent_eqv_mp.reserve((kg_a_ent_num + kg_b_ent_num) * paris_params->ENT_CANDIDATE_NUM);
+    ongoing_ent_eqv_mp.reserve(kg_a_ent_num * paris_params->ENT_CANDIDATE_NUM);
 
     uint64_t min_ent_num = std::min(kg_a_ent_num, kg_b_ent_num);
-    ent_eqv_tuples.reserve(min_ent_num + 1);
+    ent_eqv_tuples.reserve(min_ent_num * paris_params->ENT_CANDIDATE_NUM + 1);
 
     uint64_t kg_a_rel_num = kg_a->get_rel_set().size();
     uint64_t kg_b_rel_num = kg_b->get_rel_set().size();
@@ -693,7 +693,9 @@ void PARISEquiv::insert_ongoing_ent_eqv(std::unordered_map<uint64_t, std::unorde
             if (!ongoing_ent_eqv_mp.count(ent_id)) {
                 ongoing_ent_eqv_mp[ent_id] = std::unordered_map<uint64_t, double>();
             }
-            ongoing_ent_eqv_mp[ent_id][end_cp_id] = prob;
+            if (ongoing_ent_eqv_mp[ent_id].size() < paris_params->ENT_CANDIDATE_NUM) {
+                ongoing_ent_eqv_mp[ent_id][end_cp_id] = prob;
+            }
         }
     }
 }
@@ -759,6 +761,7 @@ void PARISEquiv::update_ent_eqv_from_ongoing(bool update_unaligned_ents, double 
 
         std::unordered_map<uint64_t, double>& cp_map = iter->second;
 
+        std::cout << "add from forced_eqv_mp: " << id << std::endl;
         for (auto sub_iter = cp_map.begin(); sub_iter != cp_map.end(); ++sub_iter) {
             uint64_t cp_id = sub_iter->first;
             double prob = sub_iter->second;
@@ -1297,12 +1300,10 @@ void PRModule::one_iteration_one_way_per_thread(PRModule* _this, std::queue<uint
                 double ent_cp_eqv = 1.0 - (iter->second);
 
                 if (_this->paris_params->ENABLE_EMB_EQV && _this->emb_eqv->has_emb_eqv()) {  // if has_emb_eqv() = false, it is the first iteration
-                    // double trade_off = _this->paris_params->EMB_EQV_TRADE_OFF;
                     double emb_eqv_weight = _this->paris_params->EMB_EQV_WEIGHT;
                     double sbert_eqv_weight = _this->paris_params->SBERT_EQV_WEIGHT;
                     double emb_eqv = _this->emb_eqv->get_emb_eqv(ent_id, ent_cp_candidate);
                     double sbert_eqv = _this->emb_eqv->get_sbert_eqv(ent_id, ent_cp_candidate);
-                    // ent_cp_eqv = (1.0 - trade_off) * ent_cp_eqv + trade_off * emb_eqv;
                     ent_cp_eqv = (1.0 - emb_eqv_weight - sbert_eqv_weight) * ent_cp_eqv + emb_eqv_weight * emb_eqv + sbert_eqv_weight * sbert_eqv;
                 } else {
                     double sbert_eqv_weight = _this->paris_params->SBERT_EQV_WEIGHT;
