@@ -129,11 +129,11 @@ class KGs:
         return sub_align_result, sup_align_result
 
     def get_ent_align_name_result(self):
-        ent_align_eqv_set = set()
+        ent_align_eqv_list = []     # change to list for the sorted result
         for (ent_id, ent_cp_id, prob) in self.pr.get_ent_eqv_result():
             ent_name, ent_cp_name = self.kg1.get_ent_name_by_id(ent_id), self.kg2.get_ent_name_by_id(ent_cp_id)
-            ent_align_eqv_set.add((ent_name, ent_cp_name, prob))
-        return ent_align_eqv_set
+            ent_align_eqv_list.append((ent_name, ent_cp_name, prob))
+        return ent_align_eqv_list
 
     def get_rel_align_name_result(self):
         sub_align_result, sup_align_result = set(), set()
