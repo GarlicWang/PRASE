@@ -1,4 +1,3 @@
-import csv
 import os
 import sys
 import pr
@@ -25,6 +24,7 @@ def print_kgs_stat(kgs_obj):
 
 def save_alignment(kgs_obj, iter, module):
     # output_dir = f"output/KKdata_V4/last_multi/ent_cand_3"
+    # output_dir = f"output/KKdata_V4/test_new_title_filter"
     output_dir = f"output/KKdata_V4/sbert_weight/sbert_weight_{SBERT_EQV_WEIGHT}/set_ent_candidate_{CANDIDATE_NUM}"
     # output_dir = "output/TopK_test/test_30_thre_0.1"
     if not os.path.isdir(output_dir):
@@ -32,9 +32,20 @@ def save_alignment(kgs_obj, iter, module):
     output_path = os.path.join(output_dir, f"{module}_iter_{iter}.txt")
     with open(output_path, 'w') as fout:
         for tuple in kgs_obj.get_ent_align_name_result():
-            if tuple[0] == "" or tuple[1] == "":
-                continue
-            fout.write(tuple[0]+'\t'+tuple[1]+'\t'+str(tuple[2])+'\n')
+            if tuple[0] != "" and tuple[1] != "" and tuple[0] in kg1_head_set:
+                fout.write(tuple[0]+'\t'+tuple[1]+'\t'+str(tuple[2])+'\n')
+
+def load_triple_head(rel_path_1, rel_path_2):
+    kg1_head_set, kg2_head_set = set(), set()
+    with open(rel_path_1, "r") as f:
+        data = f.readlines()
+        for row in data:
+            kg1_head_set.add(row.strip().split('\t')[0])
+    with open(rel_path_2, "r") as f:
+        data = f.readlines()
+        for row in data:
+            kg2_head_set.add(row.strip().split('\t')[0])
+    return kg1_head_set, kg2_head_set
 
 def print_kg_stat(kg_obj):
     print(get_time_str() + "Entity Number: " + str(len(kg_obj.get_ent_id_set())))
@@ -61,11 +72,13 @@ kg2_attr_path = os.path.join(base, "data/KKdata_V4/tv_triplet.txt")
 # test_path = os.path.join(base, "data/MED-BBK-9K/ent_links")
 test_path = os.path.join(base, "data/KKdata_V4/ent_mapping.txt")
 
+kg1_head_set, kg2_head_set = load_triple_head(kg1_rel_path, kg2_rel_path)
+
 print(get_time_str() + "Japanese Sentence Bert Inferencing...")
 sys.stdout.flush()
 
 SBert = sb.SBert()
-kg1_sbert_dict, kg2_sbert_dict = SBert.get_sbert_dict(kg1_rel_path, kg2_rel_path)
+kg1_sbert_dict, kg2_sbert_dict = SBert.get_sbert_dict(kg1_head_set, kg2_head_set)
 
 print(get_time_str() + "Construct source KG...")
 sys.stdout.flush()

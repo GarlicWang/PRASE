@@ -38,29 +38,12 @@ class SBert:
         self.model = SentenceBertJapanese("sonoisa/sentence-bert-base-ja-mean-tokens")
         self.vod = list()
         self.tv = list()
-        # self.vod_emb = list()
-        # self.tv_emb = list()
 
-    def load_triple(self, rel_path_1, rel_path_2):
-        vod, tv = set(), set()
-        with open(rel_path_1, "r") as f:
-            data = f.readlines()
-            for row in data:
-                vod.add(row.strip().split('\t')[0])
-
-        with open(rel_path_2, "r") as f:
-            data = f.readlines()
-            for row in data:
-                tv.add(row.strip().split('\t')[0])
-        self.vod = list(vod)
-        self.tv = list(tv)
-
-    def get_sbert_dict(self, rel_path_1, rel_path_2):
+    def get_sbert_dict(self, kg1_head_set, kg2_head_set):
         kg1_sbert_dict, kg2_sbert_dict = dict(), dict()
-        self.load_triple(rel_path_1, rel_path_2)
         # print("Japanese Sentence BERT is inferencing...")
-        self.vod_emb = self.model.encode(self.vod)
-        self.tv_emb = self.model.encode(self.tv)
+        self.vod_emb = self.model.encode(list(kg1_head_set))
+        self.tv_emb = self.model.encode(list(kg2_head_set))
         for i in range(len(self.vod)):
             kg1_sbert_dict[self.vod[i]] = self.vod_emb[i].tolist()
         for i in range(len(self.tv)):
