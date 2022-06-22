@@ -36,16 +36,14 @@ class SentenceBertJapanese:
 class SBert:
     def __init__(self):
         self.model = SentenceBertJapanese("sonoisa/sentence-bert-base-ja-mean-tokens")
-        self.vod = list()
-        self.tv = list()
 
     def get_sbert_dict(self, kg1_head_set, kg2_head_set):
         kg1_sbert_dict, kg2_sbert_dict = dict(), dict()
-        # print("Japanese Sentence BERT is inferencing...")
-        self.vod_emb = self.model.encode(list(kg1_head_set))
-        self.tv_emb = self.model.encode(list(kg2_head_set))
-        for i in range(len(self.vod)):
-            kg1_sbert_dict[self.vod[i]] = self.vod_emb[i].tolist()
-        for i in range(len(self.tv)):
-            kg2_sbert_dict[self.tv[i]] = self.tv_emb[i].tolist()
+        kg1_title_list, kg2_title_list = list(kg1_head_set), list(kg2_head_set)
+        self.kg1_emb = self.model.encode(kg1_title_list)
+        self.kg2_emb = self.model.encode(kg2_title_list)
+        for i in range(len(kg1_title_list)):
+            kg1_sbert_dict[kg1_title_list[i]] = self.kg1_emb[i].tolist()
+        for i in range(len(kg2_title_list)):
+            kg2_sbert_dict[kg2_title_list[i]] = self.kg2_emb[i].tolist()
         return kg1_sbert_dict, kg2_sbert_dict
