@@ -106,13 +106,6 @@ class PARIS:
         """
         self._pr.set_emb_eqv_weight(weight)
 
-    def set_se_trade_off(self, tradeoff):
-        """
-            Set the tradeoff of the reasoning probability and the embedding similarity
-            The default tradeoff is 0.1
-        """
-        self._pr.set_se_trade_off(tradeoff)
-
     def set_ent_candidate_num(self, candidate_num):
         """
             Set the candidate entity mapping number for each entity before matching
