@@ -16,6 +16,7 @@ def construct_kg(path_r, path_a=None, sep='\t'):
                 continue
             params = str.strip(line).split(sep=sep)
             if len(params) != 3:
+                print("this title ", line[0], " has len of ", len(params))
                 continue
             h, r, t = params[0].strip(), params[1].strip(), params[2].strip()
             kg.insert_rel_triple(h, r, t)
@@ -30,7 +31,7 @@ def construct_kg(path_r, path_a=None, sep='\t'):
                 continue
             params = str.strip(line).split(sep=sep)
             if len(params) != 3:
-                print(line)
+                print("this title ", line[0], " has len of ", len(params))
                 continue
             e, a, v = params[0].strip(), params[1].strip(), params[2].strip()
             kg.insert_attr_triple(e, a, v)
