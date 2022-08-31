@@ -38,13 +38,35 @@ class SBert:
     def __init__(self):
         self.model = SentenceBertJapanese("sonoisa/sentence-bert-base-ja-mean-tokens")
 
-    def get_sbert_dict(self, kg1_head_set, kg2_head_set):
+    # prefix format : f123_filmarksTitle, s456_sakuTitle
+    def get_sbert_dict(self, kg1_head_set, kg2_head_set, remove_prefix=False):
         kg1_sbert_dict, kg2_sbert_dict = dict(), dict()
         kg1_title_list, kg2_title_list = list(kg1_head_set), list(kg2_head_set)
-        self.kg1_emb = self.model.encode(kg1_title_list)
-        self.kg2_emb = self.model.encode(kg2_title_list)
-        for i in range(len(kg1_title_list)):
-            kg1_sbert_dict[kg1_title_list[i]] = self.kg1_emb[i].tolist()
-        for i in range(len(kg2_title_list)):
-            kg2_sbert_dict[kg2_title_list[i]] = self.kg2_emb[i].tolist()
+        if remove_prefix:
+            kg1_noprefix_title_list, kg2_noprefix_title_list = [], []
+            for title in kg1_title_list:
+                title = title.lstrip('f')
+                for i, c in enumerate(title):
+                    if c not in '0123456789':
+                        title = title[i:]
+                        break
+                parsed_title = title.lstrip('_')
+                kg1_noprefix_title_list.append(parsed_title)
+            for title in kg2_title_list:
+                title = title.lstrip('s')
+                for i, c in enumerate(title):
+                    if c not in '0123456789':
+                        title = title[i:]
+                        break
+                parsed_title = title.lstrip('_')
+                kg2_noprefix_title_list.append(parsed_title)
+            self.kg1_emb = self.model.encode(kg1_noprefix_title_list)
+            self.kg2_emb = self.model.encode(kg2_noprefix_title_list)
+        else:
+            self.kg1_emb = self.model.encode(kg1_title_list)
+            self.kg2_emb = self.model.encode(kg2_title_list)
+        for i, title in enumerate(kg1_title_list):
+            kg1_sbert_dict[title] = self.kg1_emb[i].tolist()
+        for i, title in enumerate(kg2_title_list):
+            kg2_sbert_dict[title] = self.kg2_emb[i].tolist()
         return kg1_sbert_dict, kg2_sbert_dict
