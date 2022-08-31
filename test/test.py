@@ -24,9 +24,11 @@ def print_kgs_stat(kgs_obj):
 
 def save_alignment(kgs_obj, iter, module):
     # output_dir = f"output/KKdata_V4/last_multi/ent_cand_3"
-    # output_dir = f"output/KKdata_V4/test_new_title_filter"
-    output_dir = f"output/KKdata_V4/sbert_weight/sbert_weight_{SBERT_EQV_WEIGHT}/set_ent_candidate_{CANDIDATE_NUM}"
-    # output_dir = "output/TopK_test/test_30_thre_0.1"
+    # output_dir = f"output/KKdata_V4/only_labeled_vod/sbert_weight_{SBERT_EQV_WEIGHT}/set_ent_candidate_{CANDIDATE_NUM}"
+    # output_dir = f"output/KKdata_V4/labeled_vod_tv/sbert_weight_{SBERT_EQV_WEIGHT}/set_ent_candidate_{CANDIDATE_NUM}"
+    # output_dir = f"output/KKdata_V4/sbert_weight/sbert_weight_{SBERT_EQV_WEIGHT}/set_ent_candidate_{CANDIDATE_NUM}"
+    output_dir = f"output/normalize_test/normalize_pow_{NORMALIZE_POW}/sbert_weight_{SBERT_EQV_WEIGHT}"
+    # output_dir = f"output/filmarks_saku/sbert_weight_{SBERT_EQV_WEIGHT}"
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     output_path = os.path.join(output_dir, f"{module}_iter_{iter}.txt")
@@ -70,7 +72,7 @@ kg2_attr_path = os.path.join(base, "data/KKdata_V4/tv_triplet.txt")
 # kg2_attr_path = os.path.join(base, "data/filmarks_saku/saku_attr_triplet.txt")
 
 # test_path = os.path.join(base, "data/MED-BBK-9K/ent_links")
-test_path = os.path.join(base, "data/KKdata_V4/ent_mapping.txt")
+# test_path = os.path.join(base, "data/filmarks_saku/ent_mapping.txt")
 
 kg1_head_set, kg2_head_set = load_triple_head(kg1_rel_path, kg2_rel_path)
 
@@ -112,7 +114,7 @@ kgs.set_pr_module(pr.PARIS)
 # kgs.pr.set_worker_num(6)  # default is the hardware concurrency of the thread
 
 # Set Entity Candidate Number:
-CANDIDATE_NUM = 1
+CANDIDATE_NUM = 50
 kgs.pr.set_ent_candidate_num(CANDIDATE_NUM)
 print(get_time_str() + "Entity Candidate Number: " + str(CANDIDATE_NUM))
 
@@ -153,7 +155,7 @@ sys.stdout.flush()
 kgs.run_pr()
 save_alignment(kgs, 0, "PR")
 print_kgs_stat(kgs)
-kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
+# kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
 
 kgs.pr.enable_rel_init(False)
 
@@ -166,17 +168,17 @@ for i in range(iteration):
     save_alignment(kgs, i+1, "SE")
 
     print_kgs_stat(kgs)
-    kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
+    # kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
     print(get_time_str() + "Performing PR Module (PARIS)...")
     sys.stdout.flush()
     # run pr module
     # if i == iteration-1:
-    #     kgs.pr.set_ent_candidate_num(3)
+    #     kgs.pr.set_ent_candidate_num(50)
     kgs.run_pr()
     save_alignment(kgs, i+1, "PR")
 
     print_kgs_stat(kgs)
-    kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
+    # kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
 
 # Save PRASE Model:
 # save_path = os.path.join(base, "models/KKdata_V4/PRASE_model")
