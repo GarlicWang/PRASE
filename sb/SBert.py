@@ -8,7 +8,8 @@ class SentenceBertJapanese:
         self.model.eval()
 
         if device is None:
-            device = "cuda:1" if torch.cuda.is_available() else "cpu"
+            device = "cuda:0" if torch.cuda.is_available() else "cpu"
+            print("device : ", device)
         self.device = torch.device(device)
         self.model.to(device)
 
