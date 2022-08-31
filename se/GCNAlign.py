@@ -516,7 +516,7 @@ class GCNAlign:
         self._init_train_data()
         return
 
-    def _init_train_data(self, threshold=0.1):
+    def _init_train_data(self, threshold=0.1):      # The threshold to determine whether the pair is used as alignment seed of SE Module
         self.ent_training_links.clear()
         self.kg1_test_ent_list.clear()
         self.kg2_test_ent_list.clear()
