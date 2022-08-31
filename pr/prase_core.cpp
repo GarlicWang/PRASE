@@ -89,7 +89,7 @@ PARISParams::PARISParams() {
     THREAD_NUM = std::thread::hardware_concurrency();
     MAX_THREAD_NUM = INT_MAX;
     MIN_THREAD_NUM = 1;
-    MAX_ITERATION_NUM = 10;  // 預設是10
+    MAX_ITERATION_NUM = 10;  // default is 10
     NORMALIZE_POW = 1.0;
     MAX_EMB_EQV_CACHE_NUM = 1000000;
     EMB_EQV_WEIGHT = 0.1;
@@ -369,10 +369,6 @@ bool KG::is_emb_empty(Eigen::VectorXd& emb) {
 void KG::clear_ent_embeds() {
     ent_emb_mp.clear();
 }
-
-// void KG::clear_sbert_ent_embeds() {  // No need
-//     ent_sbert_emb_mp.clear();
-// }
 
 void KG::set_ent_embed(uint64_t ent_id, Eigen::VectorXd& embeds) {
     ent_emb_mp[ent_id] = embeds;
@@ -735,7 +731,6 @@ void PARISEquiv::update_rel_eqv_from_ongoing(int norm_const) {
 
 void PARISEquiv::update_ent_eqv_from_ongoing(bool update_unaligned_ents, double threshold) {
     std::vector<std::tuple<uint64_t, uint64_t, double>> new_ent_eqv_tuples;
-    // std::unordered_set<uint64_t> visited;
 
     for (auto iter = ongoing_ent_eqv_mp.begin(); iter != ongoing_ent_eqv_mp.end(); ++iter) {
         uint64_t id = iter->first;
@@ -769,26 +764,10 @@ void PARISEquiv::update_ent_eqv_from_ongoing(bool update_unaligned_ents, double 
             return std::get<2>(a) > std::get<2>(b);
         };
 
-    std::sort(new_ent_eqv_tuples.begin(), new_ent_eqv_tuples.end(), eqv_comp);  // 把new_ent_eqv_tuples由大到小排序
+    std::sort(new_ent_eqv_tuples.begin(), new_ent_eqv_tuples.end(), eqv_comp);  // sort new_ent_eqv_tuples in decending order
 
     ent_eqv_mp.clear();
     ent_eqv_tuples.clear();
-
-    // for (auto& eqv_tuple : new_ent_eqv_tuples) {
-    //     uint64_t id = std::get<0>(eqv_tuple);
-    //     uint64_t cp_id = std::get<1>(eqv_tuple);
-    //     if (!visited.count(id) && !visited.count(cp_id)) {  // visited will be used to avoid adding the same entity twice
-    //         double prob = std::get<2>(eqv_tuple);
-    //         if (prob < threshold) {
-    //             continue;
-    //         }
-    //         update_ent_equiv(id, cp_id, prob);
-    //         update_ent_equiv(cp_id, id, prob);
-    //         ent_eqv_tuples.push_back(eqv_tuple);
-    //         visited.insert(id);
-    //         visited.insert(cp_id);
-    //     }
-    // }
 
     for (auto& eqv_tuple : new_ent_eqv_tuples) {
         uint64_t id = std::get<0>(eqv_tuple);
@@ -846,7 +825,7 @@ void PARISEquiv::init_loaded_data(double threshold) {  // will be used in GCNAli
             return std::get<2>(a) > std::get<2>(b);
         };
 
-    std::sort(new_ent_eqv_tuples.begin(), new_ent_eqv_tuples.end(), eqv_comp);  // sort the new_ent_eqv_tuples from large to small
+    std::sort(new_ent_eqv_tuples.begin(), new_ent_eqv_tuples.end(), eqv_comp);  // sort the new_ent_eqv_tuples in decending order
 
     ent_eqv_mp.clear();
     ent_eqv_tuples.clear();
@@ -866,18 +845,6 @@ void PARISEquiv::init_loaded_data(double threshold) {  // will be used in GCNAli
             visited.insert(cp_id);
         }
     }
-
-    // for (auto& eqv_tuple : new_ent_eqv_tuples) {
-    //     uint64_t id = std::get<0>(eqv_tuple);
-    //     uint64_t cp_id = std::get<1>(eqv_tuple);
-    //     double prob = std::get<2>(eqv_tuple);
-    //     if (prob < threshold) {
-    //         continue;
-    //     }
-    //     update_ent_equiv(id, cp_id, prob);
-    //     update_ent_equiv(cp_id, id, prob);
-    //     ent_eqv_tuples.push_back(eqv_tuple);
-    // }
 
     init_unaligned_set();
 }
@@ -1199,10 +1166,8 @@ void PRModule::one_iteration_one_way_per_thread(PRModule* _this, std::queue<uint
 
         if (1.0 - factor >= _this->paris_params->REL_EQV_FACTOR_THRESHOLD) {
             if (!ent_ongoing_eqv.count(head_cp_id)) {
-                // ent_ongoing_eqv[head_cp_id] = 1.0;
                 ent_ongoing_eqv[head_cp_id] = std::make_pair(1.0, 0);
             }
-            // ent_ongoing_eqv[head_cp_id] *= factor;
             ent_ongoing_eqv[head_cp_id].first *= factor;
             ent_ongoing_eqv[head_cp_id].second += 1;
         }
