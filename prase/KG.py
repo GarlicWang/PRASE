@@ -144,20 +144,20 @@ class KG:
         if ent_id is not None:
             self.kg_core.set_ent_embed(ent_id, emb)
         else:
-            print("error")
+            print("ent id is None. ent_name : ", ent_name)
 
     def insert_ent_sbert_embed_by_name(self, ent_name, emb):
         ent_id = self.get_ent_id_by_name(ent_name)
         if ent_id is not None:
             self.kg_core.set_ent_sbert_embed(ent_id, emb)
         else:
-            print("error")
+            print("ent id is None. ent_name : ", ent_name)
 
     def insert_ent_embed_by_id(self, ent_id, emb):
         if ent_id is not None:
             self.kg_core.set_ent_embed(ent_id, emb)
         else:
-            print("error")
+            print("ent id is None.")
 
     def get_ent_embed_by_id(self, ent_id):
         ent_emb = None
