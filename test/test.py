@@ -134,6 +134,10 @@ PR_ITERATION_NUM = 10
 kgs.pr.set_max_iteration_num(PR_ITERATION_NUM)
 print(get_time_str() + "PR Iteration Number: " + str(PR_ITERATION_NUM))
 
+NORMALIZE_POW = 1
+kgs.pr.set_normalize_pow(NORMALIZE_POW)
+print(get_time_str() + "PR Normalize Power: " + str(NORMALIZE_POW))
+
 '''
 Load PRASEMap Model:
 pu.load_prase_model(kgs, load_path)

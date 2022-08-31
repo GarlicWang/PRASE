@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -58,10 +59,7 @@ struct PARISParams {
     double REL_EQV_THRESHOLD;
     double REL_EQV_FACTOR_THRESHOLD;
     double REL_INIT_EQV;
-    double HIGH_CONF_THRESHOLD;
-    double OUTPUT_THRESHOLD;
     double PENALTY_VALUE;
-    double ENT_REGISTER_THRESHOLD;
     double EMB_EQV_WEIGHT;
     double SBERT_EQV_WEIGHT;
     int SBERT_EMB_DIM;
@@ -72,6 +70,7 @@ struct PARISParams {
     int MAX_THREAD_NUM;
     int MIN_THREAD_NUM;
     int MAX_ITERATION_NUM;
+    double NORMALIZE_POW;
     uint64_t ENT_CANDIDATE_NUM;
     uint64_t MAX_EMB_EQV_CACHE_NUM;
     PARISParams();
@@ -83,10 +82,7 @@ PARISParams::PARISParams() {
     REL_EQV_THRESHOLD = 0.1;
     REL_EQV_FACTOR_THRESHOLD = 0;
     REL_INIT_EQV = 0.1;
-    HIGH_CONF_THRESHOLD = 0.9;
-    OUTPUT_THRESHOLD = 0.1;
     PENALTY_VALUE = 1.01;
-    ENT_REGISTER_THRESHOLD = 0.01;
     INIT_ITERATION = 2;
     ENT_CANDIDATE_NUM = 1;  // the parameter of top-k mapping
     SMOOTH_NORM = 10;
@@ -94,6 +90,7 @@ PARISParams::PARISParams() {
     MAX_THREAD_NUM = INT_MAX;
     MIN_THREAD_NUM = 1;
     MAX_ITERATION_NUM = 10;  // 預設是10
+    NORMALIZE_POW = 1.0;
     MAX_EMB_EQV_CACHE_NUM = 1000000;
     EMB_EQV_WEIGHT = 0.1;
     SBERT_EQV_WEIGHT = 0.1;
@@ -958,6 +955,7 @@ class PRModule {
     void set_ent_eqv_bar(double);
     void set_rel_eqv_bar(double);
     void set_max_iteration_num(uint64_t);
+    void set_normalize_pow(double);
     void set_sbert_eqv_weight(double);
     void set_emb_eqv_weight(double);
     void init_loaded_data();
@@ -1016,6 +1014,10 @@ void PRModule::set_ent_candidate_num(uint64_t num) {
 
 void PRModule::set_max_iteration_num(uint64_t num) {
     paris_params->MAX_ITERATION_NUM = num;
+}
+
+void PRModule::set_normalize_pow(double pow) {
+    paris_params->NORMALIZE_POW = pow;
 }
 
 void PRModule::set_sbert_eqv_weight(double weight) {
@@ -1139,7 +1141,7 @@ bool PRModule::is_rel_init() {
 void PRModule::one_iteration_one_way_per_thread(PRModule* _this, std::queue<uint64_t>& ent_queue, KG* kg_l, KG* kg_r, bool ent_align) {
     uint64_t ent_id;
     std::unordered_map<uint64_t, std::unordered_map<uint64_t, double>> ent_eqv_result;
-    std::unordered_map<uint64_t, double> ent_ongoing_eqv;
+    std::unordered_map<uint64_t, std::pair<double, uint64_t>> ent_ongoing_eqv;      // mapping entity and its (prob, number)
     std::unordered_map<uint64_t, double> rel_ongoing_norm_eqv;
     std::unordered_map<uint64_t, std::unordered_map<uint64_t, double>> rel_ongoing_deno_eqv;
 
@@ -1197,9 +1199,12 @@ void PRModule::one_iteration_one_way_per_thread(PRModule* _this, std::queue<uint
 
         if (1.0 - factor >= _this->paris_params->REL_EQV_FACTOR_THRESHOLD) {
             if (!ent_ongoing_eqv.count(head_cp_id)) {
-                ent_ongoing_eqv[head_cp_id] = 1.0;
+                // ent_ongoing_eqv[head_cp_id] = 1.0;
+                ent_ongoing_eqv[head_cp_id] = std::make_pair(1.0, 0);
             }
-            ent_ongoing_eqv[head_cp_id] *= factor;
+            // ent_ongoing_eqv[head_cp_id] *= factor;
+            ent_ongoing_eqv[head_cp_id].first *= factor;
+            ent_ongoing_eqv[head_cp_id].second += 1;
         }
     };
 
@@ -1290,7 +1295,9 @@ void PRModule::one_iteration_one_way_per_thread(PRModule* _this, std::queue<uint
 
             for (auto iter = ent_ongoing_eqv.begin(); iter != ent_ongoing_eqv.end(); ++iter) {
                 uint64_t ent_cp_candidate = iter->first;
-                double ent_cp_eqv = 1.0 - (iter->second);
+                double normalize_pow = _this->paris_params->NORMALIZE_POW;
+                double ent_cp_eqv = 1.0 - std::pow((iter->second.first), 1/std::pow(iter->second.second, 1/normalize_pow));     // w/ normalization
+                // double ent_cp_eqv = 1.0 - (iter->second.first);      // w/o normalization
 
                 if (_this->paris_params->ENABLE_EMB_EQV && _this->emb_eqv->has_emb_eqv()) {  // if has_emb_eqv() = false, it is the first iteration
                     double emb_eqv_weight = _this->paris_params->EMB_EQV_WEIGHT;
@@ -1429,5 +1436,5 @@ PYBIND11_MODULE(prase_core, m) {
 
     py::class_<KG>(m, "KG").def(py::init()).def("insert_rel_triple", &KG::insert_rel_triple).def("insert_rel_inv_triple", &KG::insert_rel_inv_triple).def("insert_attr_triple", &KG::insert_attr_triple).def("insert_attr_inv_triple", &KG::insert_attr_inv_triple).def("get_functionality", &KG::get_functionality).def("get_inv_functionality", &KG::get_inv_functionality).def("get_relation_triples", &KG::get_relation_triples).def("get_attribute_triples", &KG::get_attribute_triples).def("get_attr_frequency_mp", &KG::get_attr_frequency_mp).def("get_ent_set", &KG::get_ent_set).def("get_rel_set", &KG::get_rel_set).def("get_lite_set", &KG::get_lite_set).def("get_attr_set", &KG::get_attr_set).def("set_ent_embed", &KG::set_ent_embed).def("set_ent_sbert_embed", &KG::set_ent_sbert_embed).def("get_ent_embed", &KG::get_ent_embed).def("clear_ent_embeds", &KG::clear_ent_embeds).def("get_rel_ent_tuples_by_ent", &KG::get_rel_ent_tuples_by_ent).def("get_attr_lite_tuples_by_ent", &KG::get_attr_lite_tuples_by_ent).def("test", &KG::test);
 
-    py::class_<PRModule>(m, "PRModule").def(py::init<KG&, KG&>()).def("init", &PRModule::init).def("init_loaded_data", &PRModule::init_loaded_data).def("update_ent_eqv", &PRModule::update_ent_eqv).def("update_lite_eqv", &PRModule::update_lite_eqv).def("update_rel_eqv", &PRModule::update_rel_eqv).def("remove_forced_equiv", &PRModule::remove_forced_eqv).def("set_worker_num", &PRModule::set_worker_num).def("set_emb_cache_capacity", &PRModule::set_emb_cache_capacity).def("set_sbert_eqv_weight", &PRModule::set_sbert_eqv_weight).def("set_max_iteration_num", &PRModule::set_max_iteration_num).def("set_emb_eqv_weight", &PRModule::set_emb_eqv_weight).def("set_ent_candidate_num", &PRModule::set_ent_candidate_num).def("set_rel_func_bar", &PRModule::set_rel_func_bar).def("set_ent_eqv_bar", &PRModule::set_ent_eqv_bar).def("set_rel_eqv_bar", &PRModule::set_rel_eqv_bar).def("reset_emb_eqv", &PRModule::reset_emb_eqv).def("enable_rel_init", &PRModule::enable_rel_init).def("enable_emb_eqv", &PRModule::enable_emb_eqv).def("get_kg_a_unaligned_ents", &PRModule::get_kg_a_unaligned_ents).def("get_kg_b_unaligned_ents", &PRModule::get_kg_b_unaligned_ents).def("run", &PRModule::run).def("get_ent_eqv_result", &PRModule::get_ent_eqv_result).def("get_rel_eqv_result", &PRModule::get_rel_eqv_result).def("get_forced_eqv_result", &PRModule::get_forced_eqv_result);
+    py::class_<PRModule>(m, "PRModule").def(py::init<KG&, KG&>()).def("init", &PRModule::init).def("init_loaded_data", &PRModule::init_loaded_data).def("update_ent_eqv", &PRModule::update_ent_eqv).def("update_lite_eqv", &PRModule::update_lite_eqv).def("update_rel_eqv", &PRModule::update_rel_eqv).def("remove_forced_equiv", &PRModule::remove_forced_eqv).def("set_worker_num", &PRModule::set_worker_num).def("set_emb_cache_capacity", &PRModule::set_emb_cache_capacity).def("set_sbert_eqv_weight", &PRModule::set_sbert_eqv_weight).def("set_max_iteration_num", &PRModule::set_max_iteration_num).def("set_normalize_pow", &PRModule::set_normalize_pow).def("set_emb_eqv_weight", &PRModule::set_emb_eqv_weight).def("set_ent_candidate_num", &PRModule::set_ent_candidate_num).def("set_rel_func_bar", &PRModule::set_rel_func_bar).def("set_ent_eqv_bar", &PRModule::set_ent_eqv_bar).def("set_rel_eqv_bar", &PRModule::set_rel_eqv_bar).def("reset_emb_eqv", &PRModule::reset_emb_eqv).def("enable_rel_init", &PRModule::enable_rel_init).def("enable_emb_eqv", &PRModule::enable_emb_eqv).def("get_kg_a_unaligned_ents", &PRModule::get_kg_a_unaligned_ents).def("get_kg_b_unaligned_ents", &PRModule::get_kg_b_unaligned_ents).def("run", &PRModule::run).def("get_ent_eqv_result", &PRModule::get_ent_eqv_result).def("get_rel_eqv_result", &PRModule::get_rel_eqv_result).def("get_forced_eqv_result", &PRModule::get_forced_eqv_result);
 }

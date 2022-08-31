@@ -100,6 +100,13 @@ class PARIS:
         """
         self._pr.set_max_iteration_num(num)
 
+    def set_normalize_pow(self, pow):
+        """
+            Set the normalize power number
+            If pow = inf will be the original PRASE
+        """
+        self._pr.set_normalize_pow(pow)
+
     def set_emb_eqv_weight(self, weight):
         """
             Set the weight of SE module similarity
