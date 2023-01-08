@@ -647,7 +647,7 @@ class GCNAlign:
             batch_loss = batch_loss1 + batch_loss2
             log = 'Training, epoch {}, average triple loss {:.4f}, cost time {:.4f} s'.format(i, batch_loss,
                                                                                      time.time() - start)
-            print(str(strftime("[%Y-%m-%d %H:%M:%S]: ", localtime())) + log)
+            # print(str(strftime("[%Y-%m-%d %H:%M:%S]: ", localtime())) + log)
             sys.stdout.flush()
             # print('epoch {}, average triple loss: {:.4f}, cost time: {:.4f}s'.format(i, batch_loss,
             #                                                                          time.time() - start))

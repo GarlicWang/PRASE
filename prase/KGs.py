@@ -170,7 +170,7 @@ class KGs:
     def set_pr_module(self, pr_module, **kwargs):
         self.pr = pr_module(self, **kwargs)
 
-    def test(self, test_path, threshold=0.0):
+    def test(self, test_path, output_path, threshold, iter):
         gold_result = set()
         with open(test_path, "r", encoding="utf8") as f:
             for line in f.readlines():
@@ -191,28 +191,38 @@ class KGs:
         else:
             threshold_list = threshold
 
-        for threshold_item in threshold_list:
-            ent_align_result = set()
-            for (ent_id, counterpart_id, prob) in self.pr.get_ent_eqv_result():
-                if prob > threshold_item:
-                    ent_align_result.add((ent_id, counterpart_id))
+        with open(output_path, "a") as f:
+            f.write(iter+'\n')
+            for threshold_item in threshold_list:
+                ent_align_result = set()
+                for (ent_id, counterpart_id, prob) in self.pr.get_ent_eqv_result():
+                    if prob > threshold_item:
+                        ent_align_result.add((ent_id, counterpart_id))
 
-            correct_num = len(gold_result & ent_align_result)
-            predict_num = len(ent_align_result)
-            total_num = len(gold_result)
+                correct_num = len(gold_result & ent_align_result)
+                predict_num = len(ent_align_result)
+                total_num = len(gold_result)
 
-            if predict_num == 0:
-                print("Threshold: " + format(threshold_item, ".3f") + "\tException: no satisfied alignment result")
-                continue
+                if predict_num == 0:
+                    print("Threshold: " + format(threshold_item, ".3f") + "\tException: no satisfied alignment result")
+                    f.write(("Threshold: " + format(threshold_item, ".3f") + "\tException: no satisfied alignment result\n"))
+                    continue
 
-            if total_num == 0:
-                print("Threshold: " + format(threshold_item, ".3f") + "\tException: no satisfied instance for testing")
-            else:
-                precision, recall = correct_num / predict_num, correct_num / total_num
-                if precision <= 0.0 or recall <= 0.0:
-                    print("Threshold: " + format(threshold_item, ".3f") + "\tPrecision: " + format(precision, ".6f") +
-                          "\tRecall: " + format(recall, ".6f") + "\tF1-Score: Nan")
+                if total_num == 0:
+                    print("Threshold: " + format(threshold_item, ".3f") + "\tException: no satisfied instance for testing")
+                    f.write("Threshold: " + format(threshold_item, ".3f") + "\tException: no satisfied instance for testing\n")
                 else:
-                    f1_score = 2.0 * precision * recall / (precision + recall)
-                    print("Threshold: " + format(threshold_item, ".3f") + "\tPrecision: " + format(precision, ".6f") +
-                          "\tRecall: " + format(recall, ".6f") + "\tF1-Score: " + format(f1_score, ".6f"))
+                    precision, recall = correct_num / predict_num, correct_num / total_num
+                    if precision <= 0.0 or recall <= 0.0:
+                        print("Threshold: " + format(threshold_item, ".3f") + "\tPrecision: " + format(precision, ".6f") +
+                            "\tRecall: " + format(recall, ".6f") + "\tF1-Score: Nan")
+                        f.write("Threshold: " + format(threshold_item, ".3f") + "\tPrecision: " + format(precision, ".6f") +
+                            "\tRecall: " + format(recall, ".6f") + "\tF1-Score: Nan\n")
+                    else:
+                        f1_score = 2.0 * precision * recall / (precision + recall)
+                        print("Threshold: " + format(threshold_item, ".3f") + "\tPrecision: " + format(precision, ".6f") +
+                            "\tRecall: " + format(recall, ".6f") + "\tF1-Score: " + format(f1_score, ".6f"))
+                        f.write("Threshold: " + format(threshold_item, ".3f") + "\tPrecision: " + format(precision, ".6f") +
+                            "\tRecall: " + format(recall, ".6f") + "\tF1-Score: " + format(f1_score, ".6f") + "\n")
+            f.write("\n\n")
+

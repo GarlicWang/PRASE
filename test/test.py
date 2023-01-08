@@ -5,7 +5,17 @@ import se
 import sb
 import utils.PRASEUtils as pu
 from time import strftime, localtime
+import argparse
 
+parser = argparse.ArgumentParser(description="Parameters for the script.")
+parser.add_argument('--dataset', default="KKS", help='the dataset of the experiment')
+parser.add_argument('--candidate_num', default=1, type=int, help='the top-k prediction for each entity')
+parser.add_argument('--sbert_eqv_weight', default=0.1, type=float, help='the weight for sbert equivalent probability')
+parser.add_argument('--emb_eqv_weight', default=0.1, type=float, help='the weight for SE embedding equivalent probability')
+parser.add_argument('--ent_eqv_thre', default=0, type=float, help='the threshold for final prediction')
+parser.add_argument('--PR_iteration_num', default=10, type=int, help='the interation num in PR module')
+parser.add_argument('--normalize_pow', default=-1, type=float, help='the power of normalizarion in PR module')
+args = parser.parse_args()
 
 def get_time_str():
     return str(strftime("[%Y-%m-%d %H:%M:%S]: ", localtime()))
@@ -27,27 +37,29 @@ def save_alignment(kgs_obj, iter, module):
     # output_dir = f"output/KKdata_V4/only_labeled_vod/sbert_weight_{SBERT_EQV_WEIGHT}/set_ent_candidate_{CANDIDATE_NUM}"
     # output_dir = f"output/KKdata_V4/labeled_vod_tv/sbert_weight_{SBERT_EQV_WEIGHT}/set_ent_candidate_{CANDIDATE_NUM}"
     # output_dir = f"output/KKdata_V4/sbert_weight/sbert_weight_{SBERT_EQV_WEIGHT}/set_ent_candidate_{CANDIDATE_NUM}"
-    output_dir = f"output/normalize_test/normalize_pow_{NORMALIZE_POW}/sbert_weight_{SBERT_EQV_WEIGHT}"
-    # output_dir = f"output/filmarks_saku/sbert_weight_{SBERT_EQV_WEIGHT}"
+    # output_dir = f"output/normalize_test/normalize_pow_{NORMALIZE_POW}/sbert_weight_{SBERT_EQV_WEIGHT}"
+    output_dir = f"output/{args.dataset}/cand_{args.candidate_num}_sb_{args.sbert_eqv_weight}_norm_{args.normalize_pow}/"
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     output_path = os.path.join(output_dir, f"{module}_iter_{iter}.txt")
     with open(output_path, 'w') as fout:
         for tuple in kgs_obj.get_ent_align_name_result():
-            if tuple[0] != "" and tuple[1] != "" and tuple[0] in kg1_head_set:
+            if tuple[0] != "" and tuple[1] != "" and tuple[0] in kg1_ent_set:
                 fout.write(tuple[0]+'\t'+tuple[1]+'\t'+str(tuple[2])+'\n')
 
-def load_triple_head(rel_path_1, rel_path_2):
-    kg1_head_set, kg2_head_set = set(), set()
+def load_entity(rel_path_1, rel_path_2):
+    kg1_ent_set, kg2_ent_set = set(), set()
     with open(rel_path_1, "r") as f:
         data = f.readlines()
         for row in data:
-            kg1_head_set.add(row.strip().split('\t')[0])
+            row = row.strip().split('\t')
+            kg1_ent_set.add(row[0])
     with open(rel_path_2, "r") as f:
         data = f.readlines()
         for row in data:
-            kg2_head_set.add(row.strip().split('\t')[0])
-    return kg1_head_set, kg2_head_set
+            row = row.strip().split('\t')
+            kg2_ent_set.add(row[0])
+    return kg1_ent_set, kg2_ent_set
 
 def print_kg_stat(kg_obj):
     print(get_time_str() + "Entity Number: " + str(len(kg_obj.get_ent_id_set())))
@@ -61,26 +73,87 @@ def print_kg_stat(kg_obj):
 path = os.path.abspath(__file__)
 base, _ = os.path.split(path)
 
-kg1_rel_path = os.path.join(base, "data/KKdata_V4/vod_triplet.txt")
-kg1_attr_path = os.path.join(base, "data/KKdata_V4/vod_triplet.txt")
-# kg1_rel_path = os.path.join(base, "data/filmarks_saku/filmarks_rel_triplet.txt")
-# kg1_attr_path = os.path.join(base, "data/filmarks_saku/filmarks_attr_triplet.txt")
+output_dir = os.path.join(base, f"results/{args.dataset}")
+if not os.path.isdir(output_dir):
+    os.makedirs(output_dir)
+output_path = os.path.join(output_dir, f"cand_{args.candidate_num}_sbert_{args.sbert_eqv_weight}_SEemb_{args.emb_eqv_weight}")
+f = open(output_path, "w")
+f.close()
 
-kg2_rel_path = os.path.join(base, "data/KKdata_V4/tv_triplet.txt")
-kg2_attr_path = os.path.join(base, "data/KKdata_V4/tv_triplet.txt")
-# kg2_rel_path = os.path.join(base, "data/filmarks_saku/saku_rel_triplet.txt")
-# kg2_attr_path = os.path.join(base, "data/filmarks_saku/saku_attr_triplet.txt")
+### Dataset
+if args.dataset == "dbp_wd_15k_V1":
+    dataset_dir = "/tmp2/yhwang/EA_dataset/DWY15K/dbp_wd_15k_V1"
+    kg1_rel_path = os.path.join(dataset_dir, "rel_triples_1")
+    kg1_attr_path = os.path.join(dataset_dir, "attr_triples_1")
+    kg2_rel_path = os.path.join(dataset_dir, "rel_triples_2")
+    kg2_attr_path = os.path.join(dataset_dir, "attr_triples_2")
+    test_path = os.path.join(dataset_dir, "ent_links")
+    
+elif args.dataset == "dbp_yg_15k_V1":
+    dataset_dir = "/tmp2/yhwang/EA_dataset/DWY15K/dbp_yg_15k_V1"
+    kg1_rel_path = os.path.join(dataset_dir, "rel_triples_1")
+    kg1_attr_path = os.path.join(dataset_dir, "attr_triples_1")
+    kg2_rel_path = os.path.join(dataset_dir, "rel_triples_2")
+    kg2_attr_path = os.path.join(dataset_dir, "attr_triples_2")
+    test_path = os.path.join(dataset_dir, "ent_links")
+    
+elif args.dataset == "KKS":
+    dataset_dir = "/tmp2/yhwang/EA_dataset/KKdata_V4"
+    kg1_rel_path = os.path.join(dataset_dir, "vod_triplet.txt")
+    kg1_attr_path = os.path.join(dataset_dir, "vod_triplet.txt")
+    kg2_rel_path = os.path.join(dataset_dir, "tv_triplet.txt")
+    kg2_attr_path = os.path.join(dataset_dir, "tv_triplet.txt")
+    test_path = os.path.join(dataset_dir, "ent_mapping.txt")
 
-# test_path = os.path.join(base, "data/MED-BBK-9K/ent_links")
-# test_path = os.path.join(base, "data/filmarks_saku/ent_mapping.txt")
+else:
+    raise BaseException("Invalid dataset!")
 
-kg1_head_set, kg2_head_set = load_triple_head(kg1_rel_path, kg2_rel_path)
+# dataset_dir = "/tmp2/yhwang/EA_dataset/DWY100K/DWY100K_raw_data/dbp_wd"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/DWY100K/DWY100K_raw_data/dbp_yg"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/SRPRS/dbp_wd_15k_V2"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/SRPRS/dbp_yg_15k_V2"
 
-print(get_time_str() + "Japanese Sentence Bert Inferencing...")
+### OpenEA Dataset v1.1
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v1.1/D_W_15K_V1"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v1.1/D_Y_15K_V1"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v1.1/D_W_100K_V1"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v1.1/D_Y_100K_V1"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v1.1/D_W_15K_V2"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v1.1/D_Y_15K_V2"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v1.1/D_W_100K_V2"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v1.1/D_Y_100K_V2"
+
+### OpenEA Dataset v2.0
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v2.0/D_W_15K_V1"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v2.0/D_Y_15K_V1"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v2.0/D_W_100K_V1"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v2.0/D_Y_100K_V1"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v2.0/D_W_15K_V2"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v2.0/D_Y_15K_V2"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v2.0/D_W_100K_V2"
+# dataset_dir = "/tmp2/yhwang/EA_dataset/OpenEA_dataset_v2.0/D_Y_100K_V2"
+
+print(get_time_str() + f"Use Dataset {args.dataset}")
 sys.stdout.flush()
 
-SBert = sb.SBert()
-kg1_sbert_dict, kg2_sbert_dict = SBert.get_sbert_dict(kg1_head_set, kg2_head_set, remove_prefix=False)
+kg1_ent_set, kg2_ent_set = load_entity(kg1_rel_path, kg2_rel_path)
+
+print(get_time_str() + "Sentence Bert Inferencing...")
+sys.stdout.flush()
+
+
+### Use preload embedding to reduce experiment time
+if args.dataset == "KKS":
+    import pickle
+    with open("/tmp2/yhwang/EA_dataset/KKdata_V4/vod_sbert_dict.pkl", "rb") as f:
+        kg1_sbert_dict = pickle.load(f)
+    with open("/tmp2/yhwang/EA_dataset/KKdata_V4/tv_sbert_dict.pkl", "rb") as f:
+        kg2_sbert_dict = pickle.load(f)
+###
+
+else:
+    SBert = sb.SBert(args.dataset)
+    kg1_sbert_dict, kg2_sbert_dict = SBert.get_sbert_dict(kg1_ent_set, kg2_ent_set)
 
 print(get_time_str() + "Construct source KG...")
 sys.stdout.flush()
@@ -114,29 +187,29 @@ kgs.set_pr_module(pr.PARIS)
 # kgs.pr.set_worker_num(6)  # default is the hardware concurrency of the thread
 
 # Set Entity Candidate Number:
-CANDIDATE_NUM = 50
+CANDIDATE_NUM = args.candidate_num
 kgs.pr.set_ent_candidate_num(CANDIDATE_NUM)
 print(get_time_str() + "Entity Candidate Number: " + str(CANDIDATE_NUM))
 
 # Set SBert Eqvalence Weight:
-SBERT_EQV_WEIGHT = 0.1
+SBERT_EQV_WEIGHT = args.sbert_eqv_weight
 kgs.pr.set_sbert_eqv_weight(SBERT_EQV_WEIGHT)
 print(get_time_str() + "SBert Eqvalence Weight: " + str(SBERT_EQV_WEIGHT))
 
 # Set Embedding Eqvalence Weight:
-EMB_EQV_WEIGHT = 0.1
+EMB_EQV_WEIGHT = args.emb_eqv_weight
 kgs.pr.set_emb_eqv_weight(EMB_EQV_WEIGHT)
 print(get_time_str() + "Embedding Eqvalence Weight: " + str(EMB_EQV_WEIGHT))
 
-ENT_EQV_THRE = 0
+ENT_EQV_THRE = args.ent_eqv_thre
 kgs.pr.set_ent_eqv_bar(ENT_EQV_THRE)
 print(get_time_str() + "Entity Eqvalence Threshold: " + str(ENT_EQV_THRE))
 
-PR_ITERATION_NUM = 10
+PR_ITERATION_NUM = args.PR_iteration_num
 kgs.pr.set_max_iteration_num(PR_ITERATION_NUM)
 print(get_time_str() + "PR Iteration Number: " + str(PR_ITERATION_NUM))
 
-NORMALIZE_POW = 1
+NORMALIZE_POW = args.normalize_pow
 kgs.pr.set_normalize_pow(NORMALIZE_POW)
 print(get_time_str() + "PR Normalize Power: " + str(NORMALIZE_POW))
 
@@ -155,7 +228,7 @@ sys.stdout.flush()
 kgs.run_pr()
 save_alignment(kgs, 0, "PR")
 print_kgs_stat(kgs)
-# kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
+kgs.test(test_path, output_path, threshold=[0.1 * i for i in range(10)], iter="PR (iter = 0) : ")
 
 kgs.pr.enable_rel_init(False)
 
@@ -168,7 +241,7 @@ for i in range(iteration):
     save_alignment(kgs, i+1, "SE")
 
     print_kgs_stat(kgs)
-    # kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
+    kgs.test(test_path, output_path, threshold=[0.1 * i for i in range(10)], iter=f"SE (iter = {i+1}) : ")
     print(get_time_str() + "Performing PR Module (PARIS)...")
     sys.stdout.flush()
     # run pr module
@@ -178,7 +251,7 @@ for i in range(iteration):
     save_alignment(kgs, i+1, "PR")
 
     print_kgs_stat(kgs)
-    # kgs.test(test_path, threshold=[0.1 * i for i in range(10)])
+    kgs.test(test_path, output_path, threshold=[0.1 * i for i in range(10)], iter=f"PR (iter = {i+1}) : ")
 
 # Save PRASE Model:
 # save_path = os.path.join(base, "models/KKdata_V4/PRASE_model")

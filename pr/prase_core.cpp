@@ -684,9 +684,10 @@ void PARISEquiv::insert_ongoing_ent_eqv(std::unordered_map<uint64_t, std::unorde
             if (!ongoing_ent_eqv_mp.count(ent_id)) {
                 ongoing_ent_eqv_mp[ent_id] = std::unordered_map<uint64_t, double>();
             }
-            if (ongoing_ent_eqv_mp[ent_id].size() < paris_params->ENT_CANDIDATE_NUM) {
-                ongoing_ent_eqv_mp[ent_id][end_cp_id] = prob;
-            }
+            // TODO: comment this for cand_1 experiment
+            // if (ongoing_ent_eqv_mp[ent_id].size() < paris_params->ENT_CANDIDATE_NUM) {
+            ongoing_ent_eqv_mp[ent_id][end_cp_id] = prob;
+            // 
         }
     }
 }
@@ -731,6 +732,7 @@ void PARISEquiv::update_rel_eqv_from_ongoing(int norm_const) {
 
 void PARISEquiv::update_ent_eqv_from_ongoing(bool update_unaligned_ents, double threshold) {
     std::vector<std::tuple<uint64_t, uint64_t, double>> new_ent_eqv_tuples;
+    std::unordered_set<uint64_t> visited;
 
     for (auto iter = ongoing_ent_eqv_mp.begin(); iter != ongoing_ent_eqv_mp.end(); ++iter) {
         uint64_t id = iter->first;
@@ -772,13 +774,20 @@ void PARISEquiv::update_ent_eqv_from_ongoing(bool update_unaligned_ents, double 
     for (auto& eqv_tuple : new_ent_eqv_tuples) {
         uint64_t id = std::get<0>(eqv_tuple);
         uint64_t cp_id = std::get<1>(eqv_tuple);
-        double prob = std::get<2>(eqv_tuple);
-        if (prob < threshold) {
-            continue;
+        
+        // TODO: comment the visited for not cand_1 experiment
+        if (!visited.count(id) && !visited.count(cp_id)) {
+            double prob = std::get<2>(eqv_tuple);
+            if (prob < threshold) {
+                std::cout << "prob < threshold" << std::endl;
+                continue;
+            }
+            update_ent_equiv(id, cp_id, prob);
+            update_ent_equiv(cp_id, id, prob);
+            ent_eqv_tuples.push_back(eqv_tuple);
+            visited.insert(id);
+            visited.insert(cp_id);
         }
-        update_ent_equiv(id, cp_id, prob);
-        update_ent_equiv(cp_id, id, prob);
-        ent_eqv_tuples.push_back(eqv_tuple);
     }
 
     if (update_unaligned_ents) {
@@ -1261,23 +1270,50 @@ void PRModule::one_iteration_one_way_per_thread(PRModule* _this, std::queue<uint
             for (auto iter = ent_ongoing_eqv.begin(); iter != ent_ongoing_eqv.end(); ++iter) {
                 uint64_t ent_cp_candidate = iter->first;
                 double normalize_pow = _this->paris_params->NORMALIZE_POW;
-                double ent_cp_eqv = 1.0 - std::pow((iter->second.first), 1/std::pow(iter->second.second, 1/normalize_pow));     // w/ normalization
-                // double ent_cp_eqv = 1.0 - (iter->second.first);      // w/o normalization
-
-                if (_this->paris_params->ENABLE_EMB_EQV && _this->emb_eqv->has_emb_eqv()) {  // if has_emb_eqv() = false, it is the first iteration
-                    double emb_eqv_weight = _this->paris_params->EMB_EQV_WEIGHT;
-                    double sbert_eqv_weight = _this->paris_params->SBERT_EQV_WEIGHT;
-                    double emb_eqv = _this->emb_eqv->get_emb_eqv(ent_id, ent_cp_candidate);
-                    double sbert_eqv = _this->emb_eqv->get_sbert_eqv(ent_id, ent_cp_candidate);
-                    ent_cp_eqv = (1.0 - emb_eqv_weight - sbert_eqv_weight) * ent_cp_eqv + emb_eqv_weight * emb_eqv + sbert_eqv_weight * sbert_eqv;
-                } else {
-                    double sbert_eqv_weight = _this->paris_params->SBERT_EQV_WEIGHT;
-                    double sbert_eqv = _this->emb_eqv->get_sbert_eqv(ent_id, ent_cp_candidate);
-                    ent_cp_eqv = (1.0 - sbert_eqv_weight) * ent_cp_eqv + sbert_eqv_weight * sbert_eqv;
+                double ent_cp_eqv = 0;
+                if (normalize_pow == -1) {      // w/o normalization
+                    ent_cp_eqv = 1.0 - (iter->second.first);
+                } else {      // w/ normalization
+                    ent_cp_eqv = 1.0 - std::pow((iter->second.first), 1/std::pow(iter->second.second, 1/normalize_pow));     // w/ normalization
+                    // ent_cp_eqv = 1.0 - std::pow((iter->second.first), normalize_pow/iter->second.second);     // new normalization version
                 }
 
+                double sbert_eqv_weight = _this->paris_params->SBERT_EQV_WEIGHT;
+                if (sbert_eqv_weight == 0) {
+                    if (_this->paris_params->ENABLE_EMB_EQV && _this->emb_eqv->has_emb_eqv()) {  // if has_emb_eqv() = false, it is the first iteration
+                        double emb_eqv_weight = _this->paris_params->EMB_EQV_WEIGHT;
+                        double emb_eqv = _this->emb_eqv->get_emb_eqv(ent_id, ent_cp_candidate);
+                        ent_cp_eqv = (1.0 - emb_eqv_weight) * ent_cp_eqv + emb_eqv_weight * emb_eqv;
+                    } else {
+                        ent_cp_eqv = ent_cp_eqv;
+                    }
+                }
+                else {
+                    if (_this->paris_params->ENABLE_EMB_EQV && _this->emb_eqv->has_emb_eqv()) {  // if has_emb_eqv() = false, it is the first iteration
+                        double emb_eqv_weight = _this->paris_params->EMB_EQV_WEIGHT;
+                        double emb_eqv = _this->emb_eqv->get_emb_eqv(ent_id, ent_cp_candidate);
+                        double sbert_eqv = _this->emb_eqv->get_sbert_eqv(ent_id, ent_cp_candidate);
+                        ent_cp_eqv = (1.0 - emb_eqv_weight - sbert_eqv_weight) * ent_cp_eqv + emb_eqv_weight * emb_eqv + sbert_eqv_weight * sbert_eqv;
+                    } else {
+                        double sbert_eqv = _this->emb_eqv->get_sbert_eqv(ent_id, ent_cp_candidate);
+                        ent_cp_eqv = (1.0 - sbert_eqv_weight) * ent_cp_eqv + sbert_eqv_weight * sbert_eqv;
+                    }
+                }
+
+                // if (_this->paris_params->ENABLE_EMB_EQV && _this->emb_eqv->has_emb_eqv()) {  // if has_emb_eqv() = false, it is the first iteration
+                //     double emb_eqv_weight = _this->paris_params->EMB_EQV_WEIGHT;
+                //     double sbert_eqv_weight = _this->paris_params->SBERT_EQV_WEIGHT;
+                //     double emb_eqv = _this->emb_eqv->get_emb_eqv(ent_id, ent_cp_candidate);
+                //     double sbert_eqv = _this->emb_eqv->get_sbert_eqv(ent_id, ent_cp_candidate);
+                //     ent_cp_eqv = (1.0 - emb_eqv_weight - sbert_eqv_weight) * ent_cp_eqv + emb_eqv_weight * emb_eqv + sbert_eqv_weight * sbert_eqv;
+                // } else {
+                //     double sbert_eqv_weight = _this->paris_params->SBERT_EQV_WEIGHT;
+                //     double sbert_eqv = _this->emb_eqv->get_sbert_eqv(ent_id, ent_cp_candidate);
+                //     ent_cp_eqv = (1.0 - sbert_eqv_weight) * ent_cp_eqv + sbert_eqv_weight * sbert_eqv;
+                // }
+
                 if (ent_cp_eqv < 0.0) {
-                    ent_cp_eqv = 0.0;
+                    ent_cp_eqv = - 0.1; // use negative value to set the entity threshold as 0
                 }
 
                 if (ent_cp_eqv > 1.0) {
@@ -1399,7 +1435,53 @@ void PRModule::iterations() {
 PYBIND11_MODULE(prase_core, m) {
     m.doc() = "Probabilistic Reasoning and Semantic Embedding";
 
-    py::class_<KG>(m, "KG").def(py::init()).def("insert_rel_triple", &KG::insert_rel_triple).def("insert_rel_inv_triple", &KG::insert_rel_inv_triple).def("insert_attr_triple", &KG::insert_attr_triple).def("insert_attr_inv_triple", &KG::insert_attr_inv_triple).def("get_functionality", &KG::get_functionality).def("get_inv_functionality", &KG::get_inv_functionality).def("get_relation_triples", &KG::get_relation_triples).def("get_attribute_triples", &KG::get_attribute_triples).def("get_attr_frequency_mp", &KG::get_attr_frequency_mp).def("get_ent_set", &KG::get_ent_set).def("get_rel_set", &KG::get_rel_set).def("get_lite_set", &KG::get_lite_set).def("get_attr_set", &KG::get_attr_set).def("set_ent_embed", &KG::set_ent_embed).def("set_ent_sbert_embed", &KG::set_ent_sbert_embed).def("get_ent_embed", &KG::get_ent_embed).def("clear_ent_embeds", &KG::clear_ent_embeds).def("get_rel_ent_tuples_by_ent", &KG::get_rel_ent_tuples_by_ent).def("get_attr_lite_tuples_by_ent", &KG::get_attr_lite_tuples_by_ent).def("test", &KG::test);
+    py::class_<KG>(m, "KG").def(py::init()).def("insert_rel_triple", &KG::insert_rel_triple)
+    .def("insert_rel_inv_triple", &KG::insert_rel_inv_triple)
+    .def("insert_attr_triple", &KG::insert_attr_triple)
+    .def("insert_attr_inv_triple", &KG::insert_attr_inv_triple)
+    .def("get_functionality", &KG::get_functionality)
+    .def("get_inv_functionality", &KG::get_inv_functionality)
+    .def("get_relation_triples", &KG::get_relation_triples)
+    .def("get_attribute_triples", &KG::get_attribute_triples)
+    .def("get_attr_frequency_mp", &KG::get_attr_frequency_mp)
+    .def("get_ent_set", &KG::get_ent_set)
+    .def("get_rel_set", &KG::get_rel_set)
+    .def("get_lite_set", &KG::get_lite_set)
+    .def("get_attr_set", &KG::get_attr_set)
+    .def("set_ent_embed", &KG::set_ent_embed)
+    .def("set_ent_sbert_embed", &KG::set_ent_sbert_embed)
+    .def("get_ent_embed", &KG::get_ent_embed)
+    .def("clear_ent_embeds", &KG::clear_ent_embeds)
+    .def("get_rel_ent_tuples_by_ent", &KG::get_rel_ent_tuples_by_ent)
+    .def("get_attr_lite_tuples_by_ent", &KG::get_attr_lite_tuples_by_ent)
+    .def("test", &KG::test)
+    ;
 
-    py::class_<PRModule>(m, "PRModule").def(py::init<KG&, KG&>()).def("init", &PRModule::init).def("init_loaded_data", &PRModule::init_loaded_data).def("update_ent_eqv", &PRModule::update_ent_eqv).def("update_lite_eqv", &PRModule::update_lite_eqv).def("update_rel_eqv", &PRModule::update_rel_eqv).def("remove_forced_equiv", &PRModule::remove_forced_eqv).def("set_worker_num", &PRModule::set_worker_num).def("set_emb_cache_capacity", &PRModule::set_emb_cache_capacity).def("set_sbert_eqv_weight", &PRModule::set_sbert_eqv_weight).def("set_max_iteration_num", &PRModule::set_max_iteration_num).def("set_normalize_pow", &PRModule::set_normalize_pow).def("set_emb_eqv_weight", &PRModule::set_emb_eqv_weight).def("set_ent_candidate_num", &PRModule::set_ent_candidate_num).def("set_rel_func_bar", &PRModule::set_rel_func_bar).def("set_ent_eqv_bar", &PRModule::set_ent_eqv_bar).def("set_rel_eqv_bar", &PRModule::set_rel_eqv_bar).def("reset_emb_eqv", &PRModule::reset_emb_eqv).def("enable_rel_init", &PRModule::enable_rel_init).def("enable_emb_eqv", &PRModule::enable_emb_eqv).def("get_kg_a_unaligned_ents", &PRModule::get_kg_a_unaligned_ents).def("get_kg_b_unaligned_ents", &PRModule::get_kg_b_unaligned_ents).def("run", &PRModule::run).def("get_ent_eqv_result", &PRModule::get_ent_eqv_result).def("get_rel_eqv_result", &PRModule::get_rel_eqv_result).def("get_forced_eqv_result", &PRModule::get_forced_eqv_result);
+    py::class_<PRModule>(m, "PRModule").def(py::init<KG&, KG&>())
+    .def("init", &PRModule::init)
+    .def("init_loaded_data", &PRModule::init_loaded_data)
+    .def("update_ent_eqv", &PRModule::update_ent_eqv)
+    .def("update_lite_eqv", &PRModule::update_lite_eqv)
+    .def("update_rel_eqv", &PRModule::update_rel_eqv)
+    .def("remove_forced_equiv", &PRModule::remove_forced_eqv)
+    .def("set_worker_num", &PRModule::set_worker_num)
+    .def("set_emb_cache_capacity", &PRModule::set_emb_cache_capacity)
+    .def("set_sbert_eqv_weight", &PRModule::set_sbert_eqv_weight)
+    .def("set_max_iteration_num", &PRModule::set_max_iteration_num)
+    .def("set_normalize_pow", &PRModule::set_normalize_pow)
+    .def("set_emb_eqv_weight", &PRModule::set_emb_eqv_weight)
+    .def("set_ent_candidate_num", &PRModule::set_ent_candidate_num)
+    .def("set_rel_func_bar", &PRModule::set_rel_func_bar)
+    .def("set_ent_eqv_bar", &PRModule::set_ent_eqv_bar)
+    .def("set_rel_eqv_bar", &PRModule::set_rel_eqv_bar)
+    .def("reset_emb_eqv", &PRModule::reset_emb_eqv)
+    .def("enable_rel_init", &PRModule::enable_rel_init)
+    .def("enable_emb_eqv", &PRModule::enable_emb_eqv)
+    .def("get_kg_a_unaligned_ents", &PRModule::get_kg_a_unaligned_ents)
+    .def("get_kg_b_unaligned_ents", &PRModule::get_kg_b_unaligned_ents)
+    .def("run", &PRModule::run)
+    .def("get_ent_eqv_result", &PRModule::get_ent_eqv_result)
+    .def("get_rel_eqv_result", &PRModule::get_rel_eqv_result)
+    .def("get_forced_eqv_result", &PRModule::get_forced_eqv_result)
+    ;
 }

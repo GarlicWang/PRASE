@@ -1,18 +1,24 @@
-from transformers import BertJapaneseTokenizer, BertModel
+from transformers import BertJapaneseTokenizer, BertTokenizer, BertModel
 import torch
-
-class SentenceBertJapanese:
-    def __init__(self, model_name_or_path, device=None):
-        self.tokenizer = BertJapaneseTokenizer.from_pretrained(model_name_or_path)
+import requests
+from tqdm import tqdm
+import pickle
+    
+class SentenceBert:
+    def __init__(self, model_name_or_path, lang):
+        if lang == "jp":
+            self.tokenizer = BertJapaneseTokenizer.from_pretrained(model_name_or_path)
+        elif lang == "en":
+            self.tokenizer = BertTokenizer.from_pretrained(model_name_or_path)
+        else:
+            raise BaseException("No such language")
         self.model = BertModel.from_pretrained(model_name_or_path)
         self.model.eval()
 
-        if device is None:
-            device = "cuda:0" if torch.cuda.is_available() else "cpu"
-            print("device : ", device)
+        device = "cuda:2" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(device)
         self.model.to(device)
-
+        
     def _mean_pooling(self, model_output, attention_mask):
         token_embeddings = model_output[0] #First element of model_output contains all token embeddings
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
@@ -35,38 +41,39 @@ class SentenceBertJapanese:
         return torch.stack(all_embeddings)
 
 class SBert:
-    def __init__(self):
-        self.model = SentenceBertJapanese("sonoisa/sentence-bert-base-ja-mean-tokens")
+    def __init__(self, dataset):
+        self.dataset = dataset
+        if dataset in ["dbp_wd_15k_V1", "dbp_yg_15k_V1"]:
+            self.model = SentenceBert("bert-base-cased", "en")
+        elif dataset in ["KKS"]:
+            self.model = SentenceBert("sonoisa/sentence-bert-base-ja-mean-tokens", "en")
 
-    # prefix format : f123_filmarksTitle, s456_sakuTitle
-    def get_sbert_dict(self, kg1_head_set, kg2_head_set, remove_prefix=False):
+    def get_sbert_dict(self, kg1_head_set, kg2_head_set):
         kg1_sbert_dict, kg2_sbert_dict = dict(), dict()
-        kg1_title_list, kg2_title_list = list(kg1_head_set), list(kg2_head_set)
-        if remove_prefix:
-            kg1_noprefix_title_list, kg2_noprefix_title_list = [], []
-            for title in kg1_title_list:
-                title = title.lstrip('f')
-                for i, c in enumerate(title):
-                    if c not in '0123456789':
-                        title = title[i:]
-                        break
-                parsed_title = title.lstrip('_')
-                kg1_noprefix_title_list.append(parsed_title)
-            for title in kg2_title_list:
-                title = title.lstrip('s')
-                for i, c in enumerate(title):
-                    if c not in '0123456789':
-                        title = title[i:]
-                        break
-                parsed_title = title.lstrip('_')
-                kg2_noprefix_title_list.append(parsed_title)
-            self.kg1_emb = self.model.encode(kg1_noprefix_title_list)
-            self.kg2_emb = self.model.encode(kg2_noprefix_title_list)
+        kg1_head_list, kg2_head_list = list(kg1_head_set), list(kg2_head_set)
+        if self.dataset == "dbp_wd_15k_V1":
+            kg1_head_text_list = [head.split('/')[-1] for head in kg1_head_list]  # kg1 : DBpedia
+            kg2_head_id_list = [head.split('/')[-1] for head in kg2_head_list]  # kg2 : Wikidata
+            with open("/tmp2/yhwang/EA_dataset/DWY15K/dbp_wd_15k_V1/wiki_id_label_dict.pkl", "rb") as f:
+                id_label_dict = pickle.load(f)
+            kg2_head_text_list = [id_label_dict[id] for id in kg2_head_id_list]
+        
+        elif self.dataset == "dbp_yg_15k_V1":
+            kg1_head_text_list = [head.split('/')[-1] for head in kg1_head_list]  # kg1 : DBpedia
+            kg2_head_text_list = kg2_head_list  # kg2 : YAGO
+        
+        elif self.dataset == "KKS":
+            kg1_head_text_list = kg1_head_list
+            kg2_head_text_list = kg2_head_list
+        
         else:
-            self.kg1_emb = self.model.encode(kg1_title_list)
-            self.kg2_emb = self.model.encode(kg2_title_list)
-        for i, title in enumerate(kg1_title_list):
-            kg1_sbert_dict[title] = self.kg1_emb[i].tolist()
-        for i, title in enumerate(kg2_title_list):
-            kg2_sbert_dict[title] = self.kg2_emb[i].tolist()
+            raise BaseException("Invalid Dataset!")
+        
+        self.kg1_emb = self.model.encode(kg1_head_text_list)
+        self.kg2_emb = self.model.encode(kg2_head_text_list)
+        
+        for i, head in enumerate(kg1_head_list):
+            kg1_sbert_dict[head] = self.kg1_emb[i].tolist()
+        for i, head in enumerate(kg2_head_list):
+            kg2_sbert_dict[head] = self.kg2_emb[i].tolist()
         return kg1_sbert_dict, kg2_sbert_dict
