@@ -76,7 +76,7 @@ base, _ = os.path.split(path)
 output_dir = os.path.join(base, f"results/{args.dataset}")
 if not os.path.isdir(output_dir):
     os.makedirs(output_dir)
-output_path = os.path.join(output_dir, f"cand_{args.candidate_num}_sbert_{args.sbert_eqv_weight}_SEemb_{args.emb_eqv_weight}")
+output_path = os.path.join(output_dir, f"cand_{args.candidate_num}_sb_{args.sbert_eqv_weight}_norm_{args.normalize_pow}_results")
 f = open(output_path, "w")
 f.close()
 
