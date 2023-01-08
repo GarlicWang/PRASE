@@ -52,6 +52,7 @@ pr/__pycache__/
 
 # Output File
 output/
+test/results/
 
 # Input File
 test/data/

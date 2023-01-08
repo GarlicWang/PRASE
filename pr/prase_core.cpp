@@ -779,7 +779,6 @@ void PARISEquiv::update_ent_eqv_from_ongoing(bool update_unaligned_ents, double 
         if (!visited.count(id) && !visited.count(cp_id)) {
             double prob = std::get<2>(eqv_tuple);
             if (prob < threshold) {
-                std::cout << "prob < threshold" << std::endl;
                 continue;
             }
             update_ent_equiv(id, cp_id, prob);
